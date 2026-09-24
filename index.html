@@ -4,15 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Jessup International Law Moot Court - National Selection Portal</title>
-    
-    <!-- Strict Anti-Cheating Check on Load -->
-    <script>
-        if (localStorage.getItem("jessup_blocked") === "true") {
-            window.addEventListener("DOMContentLoaded", function() {
-                showBlockedScreenDirectly();
-            });
-        }
-    </script>
 
     <style>
         :root {
@@ -22,14 +13,9 @@
             --bg-gray: #f8fafc;
             --card-border: #e2e8f0;
             --text-main: #1e293b;
-            --danger-red: #dc2626;
         }
 
         body {
-            -webkit-user-select: none;
-            -moz-user-select: none;
-            -ms-user-select: none;
-            user-select: none;
             font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             background-color: var(--bg-gray);
             color: var(--text-main);
@@ -186,36 +172,9 @@
         }
 
         .hidden { display: none !important; }
-
-        .warning-banner {
-            background: #fef2f2;
-            border: 1px solid #fecaca;
-            color: var(--danger-red);
-            padding: 12px;
-            border-radius: 6px;
-            font-size: 0.85rem;
-            margin-bottom: 20px;
-            text-align: center;
-            font-weight: 600;
-        }
-
-        .blocked-box {
-            background: #fef2f2;
-            border: 2px solid var(--danger-red);
-            padding: 40px 25px;
-            border-radius: 8px;
-            text-align: center;
-        }
-
-        .blocked-title {
-            color: var(--danger-red);
-            font-size: 1.8rem;
-            font-weight: 800;
-            margin-bottom: 10px;
-        }
     </style>
 </head>
-<body oncontextmenu="return false;">
+<body>
 
 <div class="portal-wrapper">
     <div class="portal-header">
@@ -245,10 +204,6 @@
             <label for="email">Institutional/Personal Email:</label>
             <input type="email" id="email" placeholder="candidate@university.edu" required>
         </div>
-        
-        <div class="warning-banner">
-            ⚠️ ANTI-CHEATING POLICY: Actively switching tabs or minimizing the browser window will trigger warnings. Exceeding 2 warnings will permanently BLOCK your attempt.
-        </div>
 
         <button type="button" id="startBtn" class="btn-action">Begin Selection Assessment</button>
     </div>
@@ -257,7 +212,6 @@
     <div id="stage-exam" class="hidden">
         <div class="status-bar">
             <span>Candidate: <span id="candidateDisplay">--</span></span>
-            <span style="color: var(--danger-red);">Warnings: <span id="warningCounter">0 / 2</span></span>
             <span class="timer-display">Time Left: <span id="timeClock">30:00</span></span>
         </div>
 
@@ -353,19 +307,6 @@
 
         <button class="btn-action" onclick="generateTranscript()">Download Official Transcript (.TXT)</button>
     </div>
-
-    <!-- STAGE 4: BLOCKED SCREEN -->
-    <div id="stage-blocked" class="content-body hidden">
-        <div class="blocked-box">
-            <div class="blocked-title">TEST TERMINATED & CANDIDATE BLOCKED</div>
-            <p style="color: #7f1d1d; font-size: 1rem; font-weight: 600;">
-                You have been PERMANENTLY BLOCKED for repeatedly leaving the examination tab (Exceeded maximum allowed warnings).
-            </p>
-            <p style="color: #475569; font-size: 0.85rem; margin-top: 15px;">
-                This violation has been logged to the executive board. Re-opening or refreshing the page will not reset your attempt.
-            </p>
-        </div>
-    </div>
 </div>
 
 <script>
@@ -375,68 +316,12 @@
     let clockInterval = null;
     let candidateInfo = {};
     let isExamActive = false;
-    let warningCount = 0;
-    const MAX_WARNINGS = 2;
-
-    function showBlockedScreenDirectly() {
-        document.getElementById('stage-registration')?.classList.add('hidden');
-        document.getElementById('stage-exam')?.classList.add('hidden');
-        document.getElementById('stage-result')?.classList.add('hidden');
-        document.getElementById('stage-blocked')?.classList.remove('hidden');
-    }
 
     document.addEventListener("DOMContentLoaded", function() {
-        if (localStorage.getItem("jessup_blocked") === "true") {
-            showBlockedScreenDirectly();
-            return;
-        }
-
         document.getElementById('startBtn').addEventListener('click', function(e) {
             e.preventDefault();
             initiateExam();
         });
-    });
-
-    // التبديل الفعلي للتبويب (Tab Switch/Window Minimize)
-    document.addEventListener("visibilitychange", function() {
-        if (document.hidden && isExamActive) {
-            warningCount++;
-            document.getElementById('warningCounter').innerText = `${warningCount} / ${MAX_WARNINGS}`;
-
-            if (warningCount > MAX_WARNINGS) {
-                triggerInstantBlock();
-            } else {
-                alert(`⚠️ WARNING ${warningCount}/${MAX_WARNINGS}: You have switched your active browser tab! Repeated violations will permanently terminate your assessment.`);
-            }
-        }
-    });
-
-    function triggerInstantBlock() {
-        isExamActive = false;
-        clearInterval(clockInterval);
-
-        localStorage.setItem("jessup_blocked", "true");
-        showBlockedScreenDirectly();
-
-        candidateInfo.status = "BLOCKED / DISQUALIFIED (Exceeded Tab Switch Limits)";
-        
-        sendToGoogleSheets({
-            timestamp: new Date().toLocaleString(),
-            name: candidateInfo.name || "Unknown",
-            academicLevel: candidateInfo.academicLevel || "Unknown",
-            email: candidateInfo.email || "Unknown",
-            status: candidateInfo.status,
-            score: "0 (Blocked)",
-            mcqAnswers: "N/A - DISQUALIFIED",
-            essay1: "N/A - DISQUALIFIED",
-            essay2: "N/A - DISQUALIFIED"
-        });
-    }
-
-    window.addEventListener("beforeunload", function() {
-        if (isExamActive) {
-            localStorage.setItem("jessup_blocked", "true");
-        }
     });
 
     function sendToGoogleSheets(payload) {
@@ -450,11 +335,6 @@
     }
 
     function initiateExam() {
-        if (localStorage.getItem("jessup_blocked") === "true") {
-            showBlockedScreenDirectly();
-            return;
-        }
-
         const name = document.getElementById('fullName').value.trim();
         const email = document.getElementById('email').value.trim();
 
